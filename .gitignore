@@ -1,0 +1,64 @@
+# --- Python Specific ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+
+# --- Project Specific Data ---
+# If you generate large path logs or performance data
+data/logs/
+outputs/
+*.csv
+*.json
+
+# --- PyBullet / 3D Assets ---
+# You usually WANT to track .urdf and .world files because they are text-based.
+# Only ignore large binary meshes if they are available elsewhere.
+# *.obj
+# *.stl
+# *.mtl
+
+# --- IDEs and Editors ---
+.vscode/
+.idea/
+*.swp
+*.swo
+.project
+.pydevproject
+.settings/
+
+# --- Operating System ---
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# --- Distribution / Packaging ---
+bin/
+build/
+develop-eggs/
+dist/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
