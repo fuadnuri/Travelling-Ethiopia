@@ -63,7 +63,7 @@ Travelling-Ethiopia/
 ## Preview
 
 ### 🗺️ BFS Pathfinder — Interactive Visualizer
-https://github.com/fuadnuri/Travelling-Ethiopia/blob/main/travelling-ethiopia.png
+<img src="https://github.com/fuadnuri/Travelling-Ethiopia/blob/main/travelling-ethiopia.png">
 ## Setup & Usage
 
 ### Prerequisites
