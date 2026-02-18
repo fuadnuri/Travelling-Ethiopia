@@ -10,8 +10,6 @@ from data.graph3 import heuristics
 from data.graph4 import coffee_tree, coffee_utilities
 from data.graph5 import relaxed_adj
 
-import pybullet as p
-
 def main():
     searcher = UCS(graph2)
 
