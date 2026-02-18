@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Travelling Ethiopia — BFS Pathfinder</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0a0e1a;
+    color: #e2e8f0;
+    font-family: 'Syne', sans-serif;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  header {
+    padding: 0.8rem 1.5rem;
+    border-bottom: 1px solid #1f2d45;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    background: #0d1829;
+    flex-shrink: 0;
+  }
+  h1 { font-size: 1.1rem; font-weight: 800; }
+  h1 span { color: #f59e0b; }
+  .badge {
+    margin-left: auto;
+    background: #1f2d45;
+    border: 1px solid #f59e0b;
+    color: #f59e0b;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+  }
+  .main { display: flex; flex: 1; overflow: hidden; }
+  .sidebar {
+    width: 260px;
+    min-width: 260px;
+    background: #111827;
+    border-right: 1px solid #1f2d45;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    overflow-y: auto;
+  }
+  .sidebar label {
+    display: block;
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #64748b;
+    margin-bottom: 0.3rem;
+  }
+  select {
+    width: 100%;
+    padding: 0.5rem 0.7rem;
+    background: #0d1829;
+    border: 1px solid #1f2d45;
+    border-radius: 6px;
+    color: #e2e8f0;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.8rem;
+    cursor: pointer;
+  }
+  select:focus { outline: none; border-color: #f59e0b; }
+  button {
+    width: 100%;
+    padding: 0.65rem;
+    background: #f59e0b;
+    color: #000;
+    border: none;
+    border-radius: 6px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  button:hover { opacity: 0.85; }
+  .result {
+    background: #0d1829;
+    border: 1px solid #1f2d45;
+    border-radius: 6px;
+    padding: 0.8rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    min-height: 120px;
+    flex: 1;
+  }
+  .result.success { border-color: #10b981; }
+  .result.fail    { border-color: #ef4444; }
+  .legend { display: flex; flex-direction: column; gap: 0.4rem; }
+  .legend-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; color: #94a3b8; }
+  .dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+  .canvas-area { flex: 1; position: relative; overflow: hidden; background: #0a0e1a; }
+  canvas { position: absolute; top: 0; left: 0; }
+  .info {
+    flex-shrink: 0;
+    padding: 0.5rem 1.5rem;
+    border-top: 1px solid #1f2d45;
+    background: #111827;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    color: #64748b;
+    display: flex;
+    gap: 2rem;
+  }
+  .info b { color: #f59e0b; }
+</style>
+</head>
+<body>
+<header>
+  <span style="font-size:1.5rem">🇪🇹</span>
+  <h1>Travelling <span>Ethiopia</span> — BFS Pathfinder</h1>
+  <div class="badge">UNINFORMED SEARCH · BFS</div>
+</header>
+
+<div class="main">
+  <div class="sidebar">
+    <div>
+      <label>Start City</label>
+      <select id="startSel"></select>
+    </div>
+    <div>
+      <label>Goal City</label>
+      <select id="goalSel"></select>
+    </div>
+    <button onclick="runBFS()">▶ Run BFS Search</button>
+    <div>
+      <label>Result</label>
+      <div class="result" id="result">Select cities above and click Run.</div>
+    </div>
+    <div class="legend">
+      <label>Legend</label>
+      <div class="legend-row"><div class="dot" style="background:#10b981"></div> Start city</div>
+      <div class="legend-row"><div class="dot" style="background:#ef4444"></div> Goal city</div>
+      <div class="legend-row"><div class="dot" style="background:#f59e0b"></div> Path node</div>
+      <div class="legend-row"><div class="dot" style="background:#1e3a5f;border:1px solid #2d5a8e"></div> Unvisited</div>
+    </div>
+  </div>
+  <div class="canvas-area" id="canvasArea">
+    <canvas id="canvas"></canvas>
+  </div>
+</div>
+
+<div class="info">
+  Cities: <b id="iCities">—</b> &nbsp;|&nbsp;
+  Path steps: <b id="iSteps">—</b> &nbsp;|&nbsp;
+  Nodes explored: <b id="iExp">—</b>
+</div>
+
+<script>
+const ADJ = {
+  "Addis Ababa":  ["Ambo","Adama","Debre Birhan"],
+  "Ambo":         ["Addis Ababa","Nekemte","Wolkite"],
+  "Adama":        ["Addis Ababa","Batu","Assella","Matahara"],
+  "Debre Birhan": ["Addis Ababa"],
+  "Nekemte":      ["Ambo","Gimbi","Bedelle"],
+  "Gimbi":        ["Nekemte","Dembi Dollo"],
+  "Dembi Dollo":  ["Gimbi","Gambella"],
+  "Gambella":     ["Dembi Dollo","Gore"],
+  "Gore":         ["Gambella","Tepi","Bedelle"],
+  "Bedelle":      ["Gore","Nekemte","Jimma"],
+  "Jimma":        ["Bedelle","Wolkite","Bonga"],
+  "Wolkite":      ["Ambo","Jimma","Worabe"],
+  "Buta Jirra":   ["Batu","Worabe"],
+  "Batu":         ["Adama","Buta Jirra","Shashemene"],
+  "Assella":      ["Adama","Assasa"],
+  "Matahara":     ["Adama","Awash"],
+  "Awash":        ["Matahara","Chiro"],
+  "Chiro":        ["Awash","Dire Dawa"],
+  "Dire Dawa":    ["Chiro","Harar"],
+  "Harar":        ["Dire Dawa","Babile"],
+  "Babile":       ["Harar","Jigjiga"],
+  "Jigjiga":      ["Babile","Dega Habur"],
+  "Dega Habur":   ["Jigjiga","Kebri Dehar"],
+  "Kebri Dehar":  ["Dega Habur","Gode","Werder"],
+  "Werder":       ["Kebri Dehar"],
+  "Gode":         ["Kebri Dehar","Sof Oumer"],
+  "Tepi":         ["Gore","Mezan Teferi","Bonga"],
+  "Bonga":        ["Tepi","Jimma","Dawro"],
+  "Mezan Teferi": ["Tepi"],
+  "Dawro":        ["Bonga","Wolaita Sodo"],
+  "Wolaita Sodo": ["Dawro","Hossana","Arba Minch"],
+  "Hossana":      ["Wolaita Sodo","Worabe"],
+  "Worabe":       ["Hossana","Wolkite","Buta Jirra"],
+  "Arba Minch":   ["Wolaita Sodo","Konso"],
+  "Konso":        ["Arba Minch","Yabello"],
+  "Yabello":      ["Konso","Moyale","Bule Hora"],
+  "Bule Hora":    ["Yabello","Dilla"],
+  "Dilla":        ["Bule Hora","Hawassa"],
+  "Hawassa":      ["Dilla","Shashemene"],
+  "Shashemene":   ["Hawassa","Batu","Dodolla"],
+  "Dodolla":      ["Shashemene","Assasa","Bale"],
+  "Assasa":       ["Dodolla","Assella"],
+  "Bale":         ["Dodolla","Goba","Sof Oumer","Liben"],
+  "Goba":         ["Bale","Sof Oumer","Dega Habur"],
+  "Sof Oumer":    ["Goba","Bale","Gode"],
+  "Liben":        ["Bale"],
+  "Moyale":       ["Yabello"],
+};
+
+// [col, row] grid positions — laid out to match Figure 5 geography
+const POS = {
+  "Gambella":     [0,   3],
+  "Dembi Dollo":  [1,   3],
+  "Gore":         [2,   3.5],
+  "Mezan Teferi": [2,   5],
+  "Gimbi":        [2,   2.5],
+  "Tepi":         [3,   4.5],
+  "Bedelle":      [3,   3],
+  "Nekemte":      [3,   2],
+  "Bonga":        [4,   5],
+  "Jimma":        [4,   4],
+  "Wolkite":      [4.5, 3],
+  "Dawro":        [4.5, 5.5],
+  "Ambo":         [4,   2],
+  "Worabe":       [5,   3.5],
+  "Hossana":      [5,   4.5],
+  "Wolaita Sodo": [5,   5.5],
+  "Addis Ababa":  [6,   2],
+  "Buta Jirra":   [6,   3],
+  "Batu":         [6.5, 3.5],
+  "Arba Minch":   [5.5, 6.5],
+  "Debre Birhan": [7,   1],
+  "Adama":        [7.5, 2.5],
+  "Shashemene":   [7,   4.5],
+  "Hawassa":      [6.5, 5.5],
+  "Dilla":        [6,   6.5],
+  "Konso":        [5.5, 7.5],
+  "Bule Hora":    [6,   7.5],
+  "Assella":      [8,   3],
+  "Matahara":     [8.5, 2],
+  "Assasa":       [8,   4.5],
+  "Dodolla":      [8,   5.5],
+  "Yabello":      [6,   8.5],
+  "Awash":        [9.5, 2],
+  "Bale":         [9,   6.5],
+  "Moyale":       [6,   10],
+  "Chiro":        [10.5,2],
+  "Sof Oumer":    [10,  7],
+  "Goba":         [10,  6],
+  "Liben":        [9,   8],
+  "Dire Dawa":    [11.5,2],
+  "Gode":         [11,  7.5],
+  "Harar":        [12,  3],
+  "Dega Habur":   [12,  5],
+  "Babile":       [12,  4],
+  "Kebri Dehar":  [12,  6.5],
+  "Jigjiga":      [13,  4.5],
+  "Werder":       [13,  7],
+};
+
+function bfs(start, goal) {
+  if (!(start in ADJ) || !(goal in ADJ)) return { path: null, explored: 0 };
+  if (start === goal) return { path: [start], explored: 1 };
+  const visited = new Set([start]);
+  const queue = [[start]];
+  let explored = 1;
+  while (queue.length) {
+    const path = queue.shift();
+    const cur = path[path.length - 1];
+    for (const nb of (ADJ[cur] || [])) {
+      if (nb === goal) return { path: [...path, nb], explored };
+      if (!visited.has(nb)) {
+        visited.add(nb);
+        explored++;
+        queue.push([...path, nb]);
+      }
+    }
+  }
+  return { path: null, explored };
+}
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const area = document.getElementById('canvasArea');
+let currentPath = [], startCity = 'Addis Ababa', goalCity = 'Moyale';
+const PAD = 45;
+
+function toXY(col, row) {
+  const W = area.clientWidth, H = area.clientHeight;
+  const cols = Object.values(POS).map(p=>p[0]);
+  const rows = Object.values(POS).map(p=>p[1]);
+  const minC = Math.min(...cols), maxC = Math.max(...cols);
+  const minR = Math.min(...rows), maxR = Math.max(...rows);
+  const sx = (W - PAD*2) / (maxC - minC);
+  const sy = (H - PAD*2) / (maxR - minR);
+  return [PAD + (col - minC)*sx, PAD + (row - minR)*sy];
+}
+
+function draw() {
+  const W = area.clientWidth, H = area.clientHeight;
+  ctx.clearRect(0, 0, W, H);
+
+  const pathSet = new Set(currentPath);
+  const pathEdges = new Set();
+  for (let i = 0; i < currentPath.length - 1; i++) {
+    pathEdges.add([currentPath[i], currentPath[i+1]].sort().join('||'));
+  }
+
+  // Draw edges
+  const drawn = new Set();
+  for (const [city, nbrs] of Object.entries(ADJ)) {
+    if (!POS[city]) continue;
+    const [x1,y1] = toXY(...POS[city]);
+    for (const nb of nbrs) {
+      if (!POS[nb]) continue;
+      const key = [city,nb].sort().join('||');
+      if (drawn.has(key)) continue;
+      drawn.add(key);
+      const [x2,y2] = toXY(...POS[nb]);
+      const isPath = pathEdges.has(key);
+      ctx.beginPath();
+      ctx.moveTo(x1,y1);
+      ctx.lineTo(x2,y2);
+      ctx.strokeStyle = isPath ? '#f59e0b' : '#1e3a5f';
+      ctx.lineWidth   = isPath ? 3 : 1;
+      ctx.globalAlpha = isPath ? 1 : 0.55;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  // Draw nodes
+  for (const [city, [col,row]] of Object.entries(POS)) {
+    const [x,y] = toXY(col, row);
+    const isStart = city === startCity;
+    const isGoal  = city === goalCity;
+    const isPath  = pathSet.has(city) && !isStart && !isGoal;
+    const r = isStart||isGoal ? 9 : isPath ? 7 : 5;
+    const fill   = isStart ? '#10b981' : isGoal ? '#ef4444' : isPath ? '#f59e0b' : '#1e3a5f';
+    const stroke = isStart ? '#6ee7b7' : isGoal ? '#fca5a5' : isPath ? '#fde68a' : '#2d5a8e';
+
+    if (isStart || isGoal || isPath) {
+      ctx.beginPath();
+      ctx.arc(x, y, r+6, 0, Math.PI*2);
+      ctx.fillStyle = fill;
+      ctx.globalAlpha = 0.2;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI*2);
+    ctx.fillStyle = fill;
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = 1.5;
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.font = `${isStart||isGoal||isPath?700:400} 7.5px Syne, sans-serif`;
+    ctx.fillStyle = isStart||isGoal||isPath ? '#ffffff' : '#94a3b8';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(city, x, y - r - 2);
+  }
+}
+
+function resize() {
+  const W = area.clientWidth, H = area.clientHeight;
+  canvas.width  = Math.floor(W * devicePixelRatio);
+  canvas.height = Math.floor(H * devicePixelRatio);
+  canvas.style.width  = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  draw();
+}
+
+function runBFS() {
+  startCity = document.getElementById('startSel').value;
+  goalCity  = document.getElementById('goalSel').value;
+  const { path, explored } = bfs(startCity, goalCity);
+  const box = document.getElementById('result');
+  if (path) {
+    currentPath = path;
+    box.className = 'result success';
+    box.textContent =
+      '✅ Path found!\n\n' +
+      path.map((c,i) => `${i===0?'▶':i===path.length-1?'🏁':'  '} ${c}`).join('\n') +
+      `\n\n📏 Steps: ${path.length-1}\n🔍 Explored: ${explored} nodes`;
+    document.getElementById('iSteps').textContent = path.length-1;
+  } else {
+    currentPath = [];
+    box.className = 'result fail';
+    box.textContent = `❌ No path found\nfrom "${startCity}"\nto "${goalCity}"`;
+    document.getElementById('iSteps').textContent = '—';
+  }
+  document.getElementById('iExp').textContent = explored;
+  draw();
+}
+
+// Populate dropdowns
+const cities = Object.keys(ADJ).sort();
+['startSel','goalSel'].forEach(id => {
+  const sel = document.getElementById(id);
+  cities.forEach(c => sel.add(new Option(c,c)));
+});
+document.getElementById('startSel').value = 'Addis Ababa';
+document.getElementById('goalSel').value  = 'Moyale';
+document.getElementById('iCities').textContent = Object.keys(ADJ).length;
+
+window.addEventListener('resize', resize);
+// Ensure canvas is ready before drawing
+window.addEventListener('load', resize);
+setTimeout(resize, 50);
+</script>
+</body>
+</html>

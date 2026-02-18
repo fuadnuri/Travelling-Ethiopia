@@ -1,7 +1,3 @@
-from interactive.world_manager import WorldManager
-from interactive.robot_factory import RobotFactory
-from interactive.robot_controller import RobotController
-from interactive.traveller import Traveler
 
 from search.astart import AStarSearch
 from search.ucs import UCS
@@ -22,7 +18,6 @@ def main():
     # 1. BFS/DFS (Figure 1
     searcher_bfs_dfs = Search(graph1)
     print("Q1.2 - BFS Addis to Axum:", searcher_bfs_dfs.bfs("Addis Ababa", "Axum"))
-    print("Q1.2 - DFS Addis to Axum:", searcher_bfs_dfs.dfs("Addis Ababa", "Axum"))
 
     # 2.2 UCS to Lalibela (Figure 2)
     searcher_ucs = UCS(graph2)
@@ -32,7 +27,7 @@ def main():
     # 2.3 Multiple Goals Local Optimum
     goals = ["Axum", "Gondar", "Lalibela", "Babile", "Jimma", "Bale", "Sof Oumer", "Arba Minch"]
     searcher_ucs_multi = UCS(graph2)
-    total_cost, full_path = searcher_ucs_multi.multi_goal_search("Addis Ababa", goals)
+    total_cost, full_path = searcher_ucs_multi.multi_goal_search("Addis Ababa", goals) # type: ignore
     print(f"Q2.3 - Multiple Goals Path: {full_path} (Total Cost: {total_cost})")
     # 3. A* Search to Moyale (Figure 3)
     search_astar = AStarSearch(graph2, heuristics)
@@ -40,14 +35,9 @@ def main():
     print(f"Q3 - A* Addis to Moyale: {path_a} (Cost: {cost_a})")
 
     # 4. MiniMax (Figure 4)
-    coffee_bot = CoffeeAdversarialSearch(coffee_tree)
+    coffee_bot = CoffeeAdversarialSearch(coffee_tree, coffee_utilities)
     score, coffee_path = coffee_bot.minimax("Addis Ababa", 0, True)
     print(f"Q4 - MiniMax Optimal Path: {coffee_path} (Quality: {score})")
 
-WorldManager.setup()
-WorldManager.visualize_cities()
-
-robot_id = RobotFactory.create()
-
-agent = RobotController(robot_id)
-agent.drive_to_city("Batu")
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,161 @@
+<?xml version="1.0"?>
+<robot name="three_wheel_robot" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ========== PROPERTIES ========== -->
+  <xacro:property name="body_radius" value="0.15"/>
+  <xacro:property name="body_height" value="0.08"/>
+  <xacro:property name="wheel_radius" value="0.04"/>
+  <xacro:property name="wheel_width"  value="0.03"/>
+
+  <!-- ========== MATERIALS ========== -->
+  <material name="dark_grey"><color rgba="0.2 0.2 0.2 1"/></material>
+  <material name="blue"><color rgba="0.1 0.4 0.8 1"/></material>
+  <material name="red"><color rgba="0.8 0.1 0.1 1"/></material>
+  <material name="green"><color rgba="0.1 0.8 0.1 1"/></material>
+  <material name="white"><color rgba="1 1 1 1"/></material>
+
+  <!-- ========== BASE LINK ========== -->
+  <link name="base_link">
+    <visual>
+      <geometry><cylinder radius="${body_radius}" length="${body_height}"/></geometry>
+      <material name="blue"/>
+    </visual>
+    <collision>
+      <geometry><cylinder radius="${body_radius}" length="${body_height}"/></geometry>
+    </collision>
+    <inertial>
+      <mass value="1.5"/>
+      <inertia ixx="0.012" ixy="0" ixz="0" iyy="0.012" iyz="0" izz="0.022"/>
+    </inertial>
+  </link>
+
+  <!-- ========== WHEEL MACRO ========== -->
+  <xacro:macro name="wheel" params="name x y z angle">
+    <link name="${name}_link">
+      <visual>
+        <geometry><cylinder radius="${wheel_radius}" length="${wheel_width}"/></geometry>
+        <material name="dark_grey"/>
+      </visual>
+      <collision>
+        <geometry><cylinder radius="${wheel_radius}" length="${wheel_width}"/></geometry>
+      </collision>
+      <inertial>
+        <mass value="0.1"/>
+        <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0002"/>
+      </inertial>
+    </link>
+    <joint name="${name}_joint" type="continuous">
+      <parent link="base_link"/>
+      <child  link="${name}_link"/>
+      <origin xyz="${x} ${y} ${z}" rpy="${angle} 0 0"/>
+      <axis xyz="0 0 1"/>
+    </joint>
+  </xacro:macro>
+
+  <!-- Front wheel -->
+  <xacro:wheel name="front_wheel" x="0.12"  y="0"     z="-0.05" angle="1.5708"/>
+  <!-- Rear left wheel -->
+  <xacro:wheel name="rear_left"   x="-0.09" y="0.11"  z="-0.05" angle="1.5708"/>
+  <!-- Rear right wheel -->
+  <xacro:wheel name="rear_right"  x="-0.09" y="-0.11" z="-0.05" angle="1.5708"/>
+
+  <!-- ========== PROXIMITY SENSOR ========== -->
+  <link name="proximity_sensor_link">
+    <visual>
+      <geometry><box size="0.02 0.02 0.02"/></geometry>
+      <material name="red"/>
+    </visual>
+  </link>
+  <joint name="proximity_joint" type="fixed">
+    <parent link="base_link"/>
+    <child  link="proximity_sensor_link"/>
+    <origin xyz="0.15 0 0.02" rpy="0 0 0"/>
+  </joint>
+
+  <!-- ========== GYROSCOPE (IMU) ========== -->
+  <link name="imu_link">
+    <visual>
+      <geometry><box size="0.02 0.02 0.01"/></geometry>
+      <material name="green"/>
+    </visual>
+  </link>
+  <joint name="imu_joint" type="fixed">
+    <parent link="base_link"/>
+    <child  link="imu_link"/>
+    <origin xyz="0 0 0.05" rpy="0 0 0"/>
+  </joint>
+
+  <!-- ========== RGB CAMERA ========== -->
+  <link name="camera_link">
+    <visual>
+      <geometry><box size="0.03 0.05 0.03"/></geometry>
+      <material name="white"/>
+    </visual>
+  </link>
+  <joint name="camera_joint" type="fixed">
+    <parent link="base_link"/>
+    <child  link="camera_link"/>
+    <origin xyz="0.13 0 0.06" rpy="0 0 0"/>
+  </joint>
+
+  <!-- ========== GAZEBO PLUGINS ========== -->
+
+  <!-- Differential drive -->
+  <gazebo>
+    <plugin name="diff_drive" filename="libgazebo_ros_diff_drive.so">
+      <left_joint>rear_left_joint</left_joint>
+      <right_joint>rear_right_joint</right_joint>
+      <wheel_separation>0.22</wheel_separation>
+      <wheel_diameter>0.08</wheel_diameter>
+      <max_wheel_torque>20</max_wheel_torque>
+      <publish_odom>true</publish_odom>
+      <publish_odom_tf>true</publish_odom_tf>
+      <odometry_frame>odom</odometry_frame>
+      <robot_base_frame>base_link</robot_base_frame>
+    </plugin>
+  </gazebo>
+
+  <!-- Proximity / Laser sensor -->
+  <gazebo reference="proximity_sensor_link">
+    <sensor name="proximity_sensor" type="ray">
+      <always_on>true</always_on>
+      <update_rate>10</update_rate>
+      <ray>
+        <scan><horizontal><samples>1</samples><min_angle>0</min_angle><max_angle>0</max_angle></horizontal></scan>
+        <range><min>0.05</min><max>3.0</max></range>
+      </ray>
+      <plugin name="proximity_plugin" filename="libgazebo_ros_ray_sensor.so">
+        <ros><remapping>~/out:=proximity</remapping></ros>
+        <output_type>sensor_msgs/Range</output_type>
+      </plugin>
+    </sensor>
+  </gazebo>
+
+  <!-- IMU / Gyroscope -->
+  <gazebo reference="imu_link">
+    <sensor name="imu_sensor" type="imu">
+      <always_on>true</always_on>
+      <update_rate>100</update_rate>
+      <plugin name="imu_plugin" filename="libgazebo_ros_imu_sensor.so">
+        <ros><remapping>~/out:=imu</remapping></ros>
+      </plugin>
+    </sensor>
+  </gazebo>
+
+  <!-- RGB Camera -->
+  <gazebo reference="camera_link">
+    <sensor name="rgb_camera" type="camera">
+      <always_on>true</always_on>
+      <update_rate>30</update_rate>
+      <camera>
+        <horizontal_fov>1.047</horizontal_fov>
+        <image><width>640</width><height>480</height><format>R8G8B8</format></image>
+        <clip><near>0.1</near><far>100</far></clip>
+      </camera>
+      <plugin name="camera_plugin" filename="libgazebo_ros_camera.so">
+        <ros><remapping>~/image_raw:=camera/image_raw</remapping></ros>
+      </plugin>
+    </sensor>
+  </gazebo>
+
+</robot>
